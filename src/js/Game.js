@@ -1,19 +1,6 @@
-class MatchConfig {
-    constructor(difficulty, bombProbability, lives) {
-        this.difficulty = difficulty;
-        this.bombProbability = bombProbability;
-        this.lives = lives;
-    }
-}
+import { BoardSquare } from './BoardSquare.js';
 
-class BoardSquare {
-    constructor(hasBomb, bombsAround) {
-        this.hasBomb = hasBomb; // True if this square contains a bomb
-        this.bombsAround = bombsAround; // Number of bombs around this square
-    }
-}
-
-class Game {
+export class Game {
     constructor(config, difficultySettings) {
         this.board = [];
         this.bombCount = 0;
@@ -24,6 +11,8 @@ class Game {
         this.lives = config.lives;
         this.currentLives = config.lives;
         this.size = difficultySettings[config.difficulty].size;
+        this.maxFlagsAllowed = this.size;
+        this.totalFlags = 0;
         this.gameOver = false;
 
         this.generateBoard();
@@ -46,9 +35,10 @@ class Game {
     placeBombs() {
         for (let i = 0; i < this.size; i++) {
             for (let j = 0; j < this.size; j++) {
-                if (Math.random() < this.bombProbability / 100) {
+                if (Math.random() * 100 < this.bombProbability) {
                     this.board[i][j].hasBomb = true;
                     this.bombCount++;
+                    console.log("M[" + i + "][" + j + "] has bomb, total bombs = " + this.bombCount);
                 }
             }
         }
@@ -107,7 +97,9 @@ class Game {
     }
 
     flagTile(x, y) {
-        if (this.gameOver) return;
+        if (this.totalFlags >= this.maxFlagsAllowed || this.gameOver) {
+            return;
+        }
 
         const tile = document.getElementById(`tile-${x}-${y}`);
         if (!this.flaggedSquares.includes(`${x},${y}`)) {
@@ -139,106 +131,3 @@ class Game {
         livesImageDiv.classList.add("big-hearts"); // Add class for styling
     }
 }
-
-class Match {
-    constructor(config, difficultySettings) {
-        this.config = config;
-        this.difficultySettings = difficultySettings;
-        this.currentGame = null;
-        this.winCount = 0;
-        this.lossCount = 0;
-    }
-
-    startNewGame() {
-        if (this.winCount + this.lossCount > 0) {
-            alert("New Game Started! Good Luck!");
-        }
-
-        this.currentGame = new Game(this.config, this.difficultySettings);
-        this.renderBoardUI();
-        document.getElementById("new-game").style.display = "block"; // Show New Game button
-    }
-
-    renderBoardUI() {
-        const gameBoardDiv = document.getElementById("game-board");
-        gameBoardDiv.innerHTML = ""; // Clear previous board
-
-        for (let i = 0; i < this.currentGame.size; i++) {
-            let rowDiv = document.createElement("div");
-            rowDiv.className = "row justify-content-center";
-            for (let j = 0; j < this.currentGame.size; j++) {
-                let tile = document.createElement("div");
-                tile.className = "col-auto border tile tile-closed";
-                tile.id = `tile-${i}-${j}`;
-                tile.addEventListener("click", () => this.discoverTile(i, j));
-                tile.addEventListener("contextmenu", (e) => {
-                    e.preventDefault();
-                    this.flagTile(i, j);
-                });
-                rowDiv.appendChild(tile);
-            }
-            gameBoardDiv.appendChild(rowDiv);
-        }
-        this.currentGame.updateLivesDisplay(); // Initial update of lives display
-    }
-
-    discoverTile(x, y) {
-        const result = this.currentGame.discoverTile(x, y);
-        if (result === "win") {
-            this.winCount++;
-            document.getElementById("win-count").textContent = this.winCount;
-        } else if (result === "loss") {
-            this.lossCount++;
-            document.getElementById("loss-count").textContent = this.lossCount;
-        }
-    }
-
-    flagTile(x, y) {
-        this.currentGame.flagTile(x, y);
-    }
-}
-
-// Main game logic
-const difficultySettings = {
-    easy: { size: 5 },
-    medium: { size: 9 },
-    expert: { size: 16 }
-};
-
-let match = null;
-
-function startMatch() {
-    alert("New Match Started! Let's See Who Wins!");
-    const difficulty = document.getElementById("difficulty").value;
-    const bombProbability = parseInt(document.getElementById("bombProbability").value);
-    const lives = parseInt(document.getElementById("lives").value);
-
-    const config = new MatchConfig(difficulty, bombProbability, lives);
-    match = new Match(config, difficultySettings);
-
-    document.getElementById("new-match").textContent = "Start New Match";
-    match.startNewGame();
-}
-
-function resetMatch() {
-    match = null;
-    document.getElementById("new-game").style.display = "none"; // Hide New Game button
-    document.getElementById("new-match").textContent = "Start New Match";
-    document.getElementById("win-count").textContent = "0";
-    document.getElementById("loss-count").textContent = "0";
-    document.getElementById("game-board").innerHTML = "";
-    document.getElementById("livesImage").innerHTML = ""; // Clear lives display
-}
-
-document.getElementById("new-game").style.display = "none"; // Hide New Game button initially
-
-document.getElementById("new-match").addEventListener("click", startMatch);
-document.getElementById("new-game").addEventListener("click", () => {
-    if (match !== null) {
-        match.startNewGame();
-    }
-});
-
-// Initialize game
-document.getElementById("win-count").textContent = "0";
-document.getElementById("loss-count").textContent = "0";
